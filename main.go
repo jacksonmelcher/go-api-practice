@@ -57,7 +57,7 @@ func createBook(c *gin.Context) {
 	fmt.Println("HERE:")	
 	fmt.Println(newBook)
 	if err := c.BindJSON(&newBook); err != nil {
-		fmt.Println("ERROR")	
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Invalid book object."} )
 		return
 	}
 
