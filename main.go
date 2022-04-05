@@ -2,11 +2,9 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/k0kubun/pp/v3"
 )
 
 
@@ -25,9 +23,7 @@ var books = []book{
 
 func getBookById(c *gin.Context){
 	id := c.Param("id")
-	pp.Printf("ID is: ",id)
 	book, err := bookById(id)
-	pp.Printf("ERROR: ",err)
 	if err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No book found with that ID"} )
 		return
@@ -44,7 +40,6 @@ func bookById(id string) (*book, error ) {
 		}
 	}
 
-	pp.Println(books)
 	return nil, errors.New("book not found")
 }
 
@@ -52,17 +47,60 @@ func getBooks(c *gin.Context){
 	c.IndentedJSON(http.StatusOK, books)
 }
 
+func checkoutBook (c *gin.Context) {
+	id, ok := c.GetQuery("id")
+	
+	if !ok {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Invalid query"} )
+		return
+	}
+
+	newBook, err := bookById(id)
+
+	if err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No book with that ID"})
+		return 
+	}
+
+	if newBook.Quantity < 1 {
+		c.IndentedJSON(http.StatusConflict, gin.H{"message": "This book is not in stock."})
+		return
+	}
+	newBook.Quantity -= 1
+
+	c.IndentedJSON(http.StatusOK, newBook)
+
+}
+
+func returnBook(c *gin.Context) {
+	id, ok := c.GetQuery("id")
+	
+	if !ok {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Invalid query"} )
+		return
+	}
+
+	newBook, err := bookById(id)
+
+	if err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No book with that ID"})
+		return 
+	}
+
+	newBook.Quantity += 1
+
+	c.IndentedJSON(http.StatusOK, newBook)
+
+}
+
 func createBook(c *gin.Context) {
 	var newBook book
-	fmt.Println("HERE:")	
-	fmt.Println(newBook)
 	if err := c.BindJSON(&newBook); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Invalid book object."} )
 		return
 	}
 
 	books = append(books, newBook)
-	pp.Println(books)
 	c.IndentedJSON(http.StatusCreated, newBook)
 }
 
@@ -71,6 +109,8 @@ func main(){
 	router.GET("/books", getBooks)
 	router.POST("/books", createBook)
 	router.GET("/books/:id", getBookById)
+	router.PATCH("/checkout", checkoutBook)
+	router.PATCH("/return", returnBook)
 	router.Run("localhost:3000")
 
 }
